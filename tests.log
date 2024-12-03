@@ -1,0 +1,55 @@
+============================= test session starts =============================
+platform win32 -- Python 3.10.1, pytest-8.3.4, pluggy-1.5.0 -- C:\Users\LostUnion\Desktop\PROJECTS\TaskManager\.venv\Scripts\python.exe
+cachedir: .pytest_cache
+rootdir: C:\Users\LostUnion\Desktop\PROJECTS\TaskManager
+configfile: pyproject.toml
+collecting ... collected 46 items
+
+tests/test_task_manager.py::test_getting_tasks PASSED
+tests/test_task_manager.py::test_getting_task_by_id PASSED
+tests/test_task_manager.py::test_getting_task_by_category PASSED
+tests/test_task_manager.py::test_getting_task_by_category_empty PASSED
+tests/test_task_manager.py::test_getting_task_by_priority PASSED
+tests/test_task_manager.py::test_getting_task_by_priority_empty PASSED
+tests/test_task_manager.py::test_getting_task_by_status PASSED
+tests/test_task_manager.py::test_getting_task_by_status_empty PASSED
+tests/test_task_manager.py::test_getting_task_due_date PASSED
+tests/test_task_manager.py::test_getting_task_empty_option PASSED
+tests/test_task_manager.py::test_getting_task_empty_value_option PASSED
+tests/test_task_manager.py::test_getting_task_invalid_value PASSED
+tests/test_task_manager.py::test_add_task_success PASSED
+tests/test_task_manager.py::test_add_task_empty_title PASSED
+tests/test_task_manager.py::test_add_task_empty_description PASSED
+tests/test_task_manager.py::test_add_task_empty_category PASSED
+tests/test_task_manager.py::test_add_task_invalid_category PASSED
+tests/test_task_manager.py::test_add_task_empty_due_date PASSED
+tests/test_task_manager.py::test_add_task_invalid_due_date PASSED
+tests/test_task_manager.py::test_add_task_past_due_date PASSED
+tests/test_task_manager.py::test_add_task_empty_priority PASSED
+tests/test_task_manager.py::test_add_task_invalid_priority PASSED
+tests/test_task_manager.py::test_add_task_empty_status PASSED
+tests/test_task_manager.py::test_add_task_invalid_status PASSED
+tests/test_task_manager.py::test_delete_task_by_id_success PASSED
+tests/test_task_manager.py::test_delete_task_by_category_success PASSED
+tests/test_task_manager.py::test_delete_task_empty_parametr PASSED
+tests/test_task_manager.py::test_delete_task_empty_parametr_id PASSED
+tests/test_task_manager.py::test_delete_task_empty_parametr_choice PASSED
+tests/test_task_manager.py::test_delete_task_invalid_id PASSED
+tests/test_task_manager.py::test_delete_task_empty_invalid_choice PASSED
+tests/test_task_manager.py::test_delete_task_out_id PASSED
+tests/test_task_manager.py::test_delete_task_invalid_category PASSED
+tests/test_task_manager.py::test_delete_task_out_category PASSED
+tests/test_task_manager.py::test_change_title_task_success PASSED
+tests/test_task_manager.py::test_change_description_task_success PASSED
+tests/test_task_manager.py::test_change_category_task_success PASSED
+tests/test_task_manager.py::test_change_due_date_task_success PASSED
+tests/test_task_manager.py::test_change_priority_task_success PASSED
+tests/test_task_manager.py::test_change_status_task_success PASSED
+tests/test_task_manager.py::test_change_status_task_empty_id PASSED
+tests/test_task_manager.py::test_change_status_task_invalid_id PASSED
+tests/test_task_manager.py::test_change_status_task_empty_column PASSED
+tests/test_task_manager.py::test_change_status_task_invalid_column PASSED
+tests/test_task_manager.py::test_change_status_task_empty_value PASSED
+tests/test_task_manager.py::test_change_status_task_doubles PASSED
+
+============================= 46 passed in 0.80s ==============================
