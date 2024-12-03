@@ -38,7 +38,9 @@ class KeywordColorFormatter(logging.Formatter):
 # Настройка логера
 logger = logging.getLogger("keyword_color_logger")
 handler = logging.StreamHandler()
-formatter = KeywordColorFormatter("%(asctime)s - %(levelname)s - %(message)s")
+formatter = KeywordColorFormatter(
+    "%(asctime)s - %(levelname)s - %(message)s"
+)
 handler.setFormatter(formatter)
 logger.addHandler(handler)
 logger.setLevel(logging.DEBUG)
@@ -98,18 +100,7 @@ class TaskManager():
 
     def format_tasks_table(self, tasks: list):
         """
-        Формирует таблицу с задачами.
-
-        Эта функция очищает таблицу и добавляет в неё строки с данными
-        о задачах.
-
-        Аргументы:
-            tasks (list): Список задач, каждая из которых представлена как словарь
-                          с ключами 'id', 'title', 'description', 'category', 
-                          'due_date', 'priority', и 'status'.
-
-        Возвращает:
-            table: Обновлённая таблица с данными о задачах.
+        ...
         """
 
         # Очистка всех строк из table.
@@ -130,46 +121,107 @@ class TaskManager():
             )
     
         return table
-
+    
     def getting_task(self, value: str = "", option: str = ""):
+        """
+        Получает задачи из файла `data.json` на основе указанных фильтров.
+
+        Эта функция фильтрует задачи по указанным полям и возвращает только те, 
+        которые соответствуют заданным параметрам. В случае ошибок валидации 
+        или отсутствия подходящих задач, возвращается `False` 
+        и выводится сообщение об ошибке.
+
+        Аргументы:
+            value (str): Значение для поиска. 
+                         Может быть пустым, если нужно вернуть все задачи.
+            option (str): Поле для фильтрации задач. Должно быть одним из:
+                - "id": Идентификатор задачи (целое число).
+                - "category": Категория задачи.
+                - "priority": Приоритет задачи (строка, одно из: 
+                              "Высокий", "Средний", "Низкий").
+                - "status": Статус задачи (строка, одно из: 
+                            "Выполнена", "Не выполнена").
+                - "keywords": Ключевые слова для поиска в полях задачи (например, 
+                              "title", "description").
+                - "due_date": Дата завершения задачи. 
+                        Используется для поиска просроченных задач.
+
+        Возвращает:
+            list: Список задач, соответствующих фильтрам. 
+                  Если задач не найдено, возвращает `False`.
+        """
 
         try:
-
             # Открытие файла data.json в режиме чтения и кодировкой UTF-8.
             with open(self.path, "r", encoding="UTF-8") as file:
                 data = json.load(file)
 
-            # Проверка, что если поле value пустое, а option указано, возникает ошибка.
-            if value == "" and option:
+            if option == "due_date":
+                value = "Просрочено"
+
+            # Проверка, что если поле value пустое, а option указано, 
+            # возникает ошибка.
+            if value.strip() == "" and option:
                 logger.error(
-                    "При указании значения в поле \"option\" необходимо указать искомое значение "
-                    "в поле \"value\""
+                    "При указании значения в поле \"option\" необходимо указать "
+                    "искомое значение в поле \"value\""
                 )
                 return False
-        
+            
             # Проверка, что если value есть, а option пустое, возникает ошибка.
-            if value and option == "":
+            if value and option.strip() == "":
                 logger.error(
                     "При указании значения в поле \"value\" необходимо указать значение "
                     "в поле \"option\""
                 )
                 return False
-        
+            
             # Проверка, что если value и option пустые, возвращаются все данные.
             if value == "":
                 if self.pretty_printed_JSON:
                     return json.dumps(data, indent=4, ensure_ascii=False)
                 else:
                     return self.format_tasks_table(data)
+                
+            if option == "id":
+                value = int(value)
+                
+            if value and option not in ["id", "category", "priority",
+                                        "status", "keywords", "due_date"]:
+                logger.error(
+                    "Аргумент \"option\" должен принимать одно из допустимых значений: "
+                    "\"id\", \"category\", \"priority\", "
+                    "\"status\", \"keywords\", \"due_date\""
+                )
+                return False
             
+            if option == "status" and value not in ["Выполнена", "Не выполнена"]:
+                logger.error(
+                    "Аргумент \"value\" должен принимать одно из допустимых значений: "
+                    "\"Выполнена\" или \"Не выполнена\""
+                )
+                return False
+            
+            if option == "priority" and value not in ["Высокий",
+                                                      "Средний",
+                                                      "Низкий"]:
+                logger.error(
+                    "Аргумент \"value\" должен принимать одно из допустимых значений: "
+                    "\"Высокий\", \"Средний\" или \"Низкий\""
+                )
+                return False
+                
             # Проверка, если значение есть, а option одно из допустимых значений,
             # затем выполняется валидация для указанного поля.
             if value and option in ["id", "category", "priority", "status"]:
-                if not self.data_validation(value=value, column=str(option), intention="search"):
+                if not self.data_validation(value=value,
+                                            column=str(option),
+                                            intention="search"):
                     logger.error(f"Валидация для \"{option}\" не прошла.")
                     return False
-            
-                # Фильтрация задач, добавление задачи, где значение поля option равно value.
+                
+                # Фильтрация задач, добавление задачи, 
+                # где значение поля option равно value.
                 new_data = [task for task in data if task[option] == value]
 
                 # Если new_data не пусто, выводим данные в формате JSON или таблицы, 
@@ -182,7 +234,7 @@ class TaskManager():
                 else:
                     logger.warning(f"Значение \"{value}\" не было найдено в файле.")
                     return False
-        
+                
             # Проверка, если option == "keywords" для поиска по ключевым словам.
             if option == "keywords":
                 new_data = []
@@ -195,7 +247,7 @@ class TaskManager():
                         # Избежание дублирования
                         if task not in new_data:
                             new_data.append(task)
-            
+
                 # Если new_data не пусто, выводим данные в формате JSON или таблицы, 
                 # если данных нет, возвращаем False.
                 if new_data:
@@ -204,9 +256,11 @@ class TaskManager():
                     else:
                         return self.format_tasks_table(new_data)
                 else:
-                    logger.warning(f"Ключевого слова \"{value}\" не было найдено в таблице.")
+                    logger.warning(
+                        f"Ключевого слова \"{value}\" не было найдено в таблице."
+                    )
                     return False
-        
+                
             # Проверка, если option == "due_date" для поиска по просроченной дате.
             if option == "due_date":
                 # Получение нынешнего времени.
@@ -231,18 +285,17 @@ class TaskManager():
                     return False
                 
         except Exception as err:
-            logger.critical(f"Произошла ошибка в функции \"{__name__}\": {err}")
+            logger.critical(f"Произошла ошибка в функции \"getting_task\": {err}")
             return False
-    
-            
+
     def data_validation(self, column: str = "", value: str = "", 
-                        new_value: str = "", intention: str = "",
-                        search_option: str = ""):
+                        new_value: str = "", intention: str = ""):
         """
         Функция валидации данных при добавлении или изменении задачи.
 
-        Проверяет значения для различных полей задачи на соответствие типам данных,
-        ограничениям по длине, допустимым значениям и формату даты.
+        Проверяет значения для различных полей задачи на соответствие 
+        типам данных, ограничениям по длине, допустимым значениям 
+        и формату даты.
 
         Аргументы:
             column (str): Имя столбца, которое проверяется.
@@ -264,121 +317,26 @@ class TaskManager():
                 )
                 return False
             
-            # Валидация search_option, если это поиск
-            if intention == "search":
-                valid_search_options = ["id", "keywords", "category", "status"]
-                if search_option and search_option not in valid_search_options:
-                    logger.error(
-                        "Значение в поле \"search_option\" должно быть одно из: "
-                        f"{', '.join(valid_search_options)}."
-                    )
-                    return False
-                
-            # Проверка на пустые строки
-            if intention != "search" and (
-                not column.strip() or
-                (isinstance(value, str) and not value.strip()) or
-                not intention.strip()):
-                logger.error(
-                    "Значения \"column\", \"value\" и \"intention\" не могут быть пустыми."
-                )
-                return False
-            
-            # Валидация column, если это удаление
-            if intention == "delete":
-                if column not in ["id", "category"]:
-                    logger.error(
-                        "Значение \"column\" должно быть одним из значений: \"id\" или \"category\"."
-                    )
-                    return False
-
-            # Проверка значения id на int или str
-            if column == "id":
-                # Проверка, что значение является числом (int) или строкой с цифрами
-                if not (isinstance(value, int) or
-                        (isinstance(value, str) and value.strip().isdigit())):
-                    logger.error(
-                        "Значение для \"id\" должно быть целым числом или строкой, содержащей только цифры."
-                    )
-                    return False
-                
-                # Если id типа (str), преобразование в число
-                if isinstance(value, str):
-                    value = int(value)
-            
-            # Валидация value, если это column == "priority"
-            if column == "priority":
-                if value not in ["Высокий", "Средний", "Низкий"]:
-                    logger.error(
-                        "При использовании опции \"priority\" в value должны передаваться "
-                        "только значения \"Высокий\", \"Средний\" или \"Низкий\". "
-                        f"Значение \"{value}\" не поддерживается."
-                    )
-                    return False
-            
-            # Валидация value, если это column == "status"
-            if column == "status":
-                if value not in ["Выполнена", "Не выполнена"]:
-                    logger.error(
-                        "При использовании опции \"status\" в value должны передаваться "
-                        "только значения \"Выполнена\" или \"Не выполнена\". "
-                        f"Значение \"{value}\" не поддерживается."
-                    )
-                    return False
-                
-            # Проверка на одинаковые значения value и new_value, 
-            # если intention == "change"
-            if intention == "change" and value == new_value:
-                logger.error(
-                    f"Значение \"{column}\" не может быть изменено с {value} на {new_value}, "
-                    "поскольку значения одинаковые."
-                )
-                return False
-            
-            # Проверка входящих данных если намениние add или change
-            if intention == "add" or intention == "change":
-                # Проверка на цифры в начале строки если это не дата
-                if value[0].isdigit() and column != "due_date":
-                    logger.error(f"Значение \"{column}\" не может начинаться с цифры.")
-                    return False
-                
-                # Проверка на специальные символы (кроме "due_date" и "description")
-                if any(
-                    char in string.punctuation for char in value
-                    ) and column not in ["due_date", "description"]:
-                    logger.error(
-                        f"Значение \"{column}\" не должно содержать специальных символов."
-                    )
-                    return False
-                
-                # Проверка на допустимые значения для column
-                valid_columns = ["title", "description", "category",
-                                 "due_date", "priority", "status"]
-                if column not in valid_columns:
-                    logger.error(
-                        "Неверное значение для \"column\". Допустимые значения:"
-                        f"{', '.join(valid_columns)}."
-                    )
-                    return False
-                
+            # Проверка, если намерение change или add
+            if intention == "change" or intention == "add":
                 # Проверка на длинну value если column == "title"
-                if column == "title" and len(value) < 5:
+                if column == "title" and len(new_value) < 5:
                     logger.error("Поле \"title\" не может быть меньше 5 символов.")
                     return False
                 
                 # Проверка на длинну value если column == "description"
-                if column == "description" and len(value) < 10:
-                    logger.error("Поле \"description\" не может быть меньше 20 символов.")
+                if column == "description" and len(new_value) < 10:
+                    logger.error("Поле \"description\" не может быть меньше 10 символов.")
                     return False
                 
                 # Проверка на длинну value если column == column == "category"
-                if column == "category" and len(value) < 2:
+                if column == "category" and len(new_value) < 2:
                     logger.error("Поле \"category\" не может быть меньше 2 символов.")
                     return False
                 
                 # Проверка на допустимые значения для priority
                 valid_priority_value = ["Низкий", "Средний", "Высокий"]
-                if column == "priority" and value not in valid_priority_value:
+                if column == "priority" and new_value not in valid_priority_value:
                     logger.error(
                         "Поле \"priority\" должно быть одним из значений: "
                         "\"Низкий\", \"Средний\", \"Высокий\"."
@@ -386,7 +344,8 @@ class TaskManager():
                     return False
                 
                 # Проверка на допустимые значения для status
-                if column == "status" and value not in ["Выполнена", "Не выполнена"]:
+                if column == "status" and new_value not in ["Выполнена",
+                                                            "Не выполнена"]:
                     logger.error(
                         "Поле \"status\" должно быть одним из значений: "
                         "\"Выполнена\", \"Не выполнена\"."
@@ -397,19 +356,19 @@ class TaskManager():
                 if column == "due_date":
                     # Шаблон даты
                     date_pattern = r'^\d{4}-\d{2}-\d{2}$'
-                    if not re.match(date_pattern, value.strip()):
+                    if not re.match(date_pattern, new_value.strip()):
                         logger.error(
-                            f"{value} в поле \"due_date\" указано некорректно. "
+                            f"{new_value} в поле \"due_date\" указано некорректно. "
                             "Ожидается формат YYYY-MM-DD."
                         )
                         return False
                     
                     # Проверка на будущую дату
                     now = datetime.today().date()
-                    if now.strftime("%Y-%m-%d") > value.strip():
+                    if now.strftime("%Y-%m-%d") > new_value.strip():
                         logger.error("Поле \"due_date\" не может содержать дату из прошлого.")
                         return False
-                
+
                 # Проверка на допустимые значения для column если intention == "search"
                 valid_columns_search = ["id", "title", "description",
                                         "category", "due_date", "priority",
@@ -420,7 +379,15 @@ class TaskManager():
                         f"{', '.join(valid_columns_search)}."
                     )
                     return False
-
+                
+                # Проверка на повторяющиеся значения, если намерение change
+                if value == new_value:
+                    logger.error(
+                        f"Значение поля \"{column}\" не может быть изменено с \"{value}\" "
+                        f"на \"{new_value}\", поскольку значения одинаковые."
+                    )
+                    return False
+                
         except Exception as err:
             logger.critical(f"Произошла ошибка в функции \"{__name__}\": {err}")
             return False
@@ -454,7 +421,7 @@ class TaskManager():
             # Валидация title
             if not self.data_validation(
                 column="title",
-                value=title,
+                new_value=title,
                 intention="add"
                 ):
                 return False
@@ -462,7 +429,7 @@ class TaskManager():
             # Валидация description
             if not self.data_validation(
                 column="description",
-                value=description,
+                new_value=description,
                 intention="add"
                 ):
                 return False
@@ -470,7 +437,7 @@ class TaskManager():
             # Валидация category
             if not self.data_validation(
                 column="category",
-                value=category,
+                new_value=category,
                 intention="add"
                 ):
                 return False
@@ -478,7 +445,7 @@ class TaskManager():
             # Валидация due_date
             if not self.data_validation(
                 column="due_date",
-                value=due_date,
+                new_value=due_date,
                 intention="add"
                 ):
                 return False
@@ -486,7 +453,7 @@ class TaskManager():
             # Валидация priority
             if not self.data_validation(
                 column="priority",
-                value=priority,
+                new_value=priority,
                 intention="add"
                 ):
                 return False
@@ -494,7 +461,7 @@ class TaskManager():
             # Валидация status
             if not self.data_validation(
                 column="status",
-                value=status,
+                new_value=status,
                 intention="add"
                 ):
                 return False
@@ -532,28 +499,44 @@ class TaskManager():
             logger.critical(f"Произошла ошибка в функции \"{__name__}\": {err}")
             return False
         
+        logger.info(f"Новая задача добавлена в таблицу.")
         return True
     
-    def delete_task(self, value: str = "", choice: str = "id"):
+    def delete_task(self, value: str = "", choice: str = ""):
         """
         Функция для удаления задачи из системы по заданному параметру.
 
-        Она выполняет валидацию параметров задачи, затем открывает файл данных (data.json),
-        удаляет задачу, если она найдена, и сохраняет обновленные данные обратно в файл. 
+        Она выполняет валидацию параметров задачи, затем открывает файл данных 
+        (data.json), удаляет задачу, если она найдена, и сохраняет обновленные 
+        данные обратно в файл. 
         Если задача не найдена или произошла ошибка, возвращает False.
 
         Аргументы:
-            value (str): Значение параметра, по которому будет производиться удаление задачи. 
-                         Например, это может быть id задачи.
-            choice (str): Параметр, по которому будет осуществляться поиск задачи для удаления. 
-                          Допустимые значения: "id", "category", "priority", "status".
-                          По умолчанию используется "id".
+            value (str): Значение параметра, по которому будет производиться 
+                         удаление задачи. Например, это может быть id задачи.
+            choice (str): Параметр, по которому будет осуществляться поиск 
+                          задачи для удаления. Допустимые значения: "id" или "category"
 
         Возвращает:
             bool: True, если задача успешно удалена, иначе False.
         """
 
         self.task_found = False
+
+        # Проверка на заполненные значения в value и choice
+        if value == "" or choice == "":
+            logger.error(
+                f"Значения в аргументах value и choice не должны быть пустыми."
+            )
+            return False
+        
+        # Проверка на допустимые значения для choice
+        if choice not in ["id", "category"]:
+            logger.error(
+                f"Значения в аргументе choice должны быть включать в себя только "
+                "\"id\" или \"category\""
+            )
+            return False
 
         try:
             # Валидация value и choice
@@ -564,42 +547,68 @@ class TaskManager():
                 ):
                 return False
             
+            new_data = []
+            
             # Открытие файла data.json в режиме чтения и кодировкой UTF-8.
             with open(self.path, "r", encoding="UTF-8") as file:
                 data = json.load(file)
 
-            new_data = [task for task in data if task[f"{choice}"] == value]
+            if choice == "category":
+                for task in data:
+                    if task["category"] == value:
+                        self.task_found = True
+                        logger.info(
+                            f"Задача \"{task['title']}\" с ID {task['id']}, с категорией "
+                            f"\"{value}\" была успешно удалена."
+                        )
+                        continue
+
+                    new_data.append(task)
+
+                if not self.task_found:
+                    logger.warning(f"Задачи с категорией \"{value}\" не найдены.")
+                    return False
+                
+                # Запись измененных данных в файл
+                with open(self.path, "w", encoding="utf-8") as file:
+                    json.dump(new_data, file, indent=4, ensure_ascii=False)
+
+                return True
             
-            # Сравнение данных из new_data и data по длинне
-            if len(new_data) == len(data):
-                return False
+            if choice == "id":
+                value = int(value)
+                for task in data:
+                    if task["id"] == value:
+                        self.task_found = True
+                        logger.info(
+                            f"Задача \"{task['title']}\" с ID {task['id']} была успешно удалена."
+                        )
+                        continue
 
-            # Запись измененных данных в файл
-            with open(self.path, "w", encoding="utf-8") as file:
-                json.dump(new_data, file, indent=4, ensure_ascii=False)
+                    new_data.append(task)
 
-            # Если new_data не пусто, выводим данные в формате JSON или таблицы, 
-            # если данных нет, возвращаем False.
-            if new_data:
-                if self.pretty_printed_JSON:
-                    return json.dumps(new_data, indent=4, ensure_ascii=False)
-                else:
-                    return self.format_tasks_table(new_data)
-            else:
-                logger.warning(f"Значение \"{value}\" не было найдено в файле.")
-                return False
+                if not self.task_found:
+                    logger.warning(f"Задача с ID {value} не найдена.")
+                    return False
+                
+                # Запись измененных данных в файл
+                with open(self.path, "w", encoding="utf-8") as file:
+                    json.dump(new_data, file, indent=4, ensure_ascii=False)
+
+                return True
 
         except Exception as err:
-            logger.critical(f"Произошла ошибка в функции \"{__name__}\": {err}")
+            logger.critical(f"Произошла ошибка в функции \"delete_task\": {err}")
             return False
         
-    def change_task(self, _id: int, column: str = "", value: str = ""):
+    def change_task(self, _id: Optional[int] = None, column: str = "", value: str = ""):
         """
         Функция для изменения существующей задачи в системе.
 
-        Она проверяет параметры изменения задачи с помощью валидации, затем 
-        обновляет нужное поле задачи и сохраняет изменения в файл данных (data.json). 
-        Каждый параметр задачи проверяется на допустимость значений.
+        Она проверяет параметры изменения задачи с помощью валидации, 
+        затем обновляет нужное поле задачи и сохраняет изменения в 
+        файл данных (data.json). Каждый параметр задачи проверяется 
+        на допустимость значений.
 
         Аргументы:
             _id (int): Уникальный идентификатор задачи, которую нужно изменить.
@@ -611,52 +620,79 @@ class TaskManager():
         """
 
         self.task_found = False
+        column = str(column)
+        value = str(value)
 
+        # Проверка _id на значение
+        if _id is None:
+            logger.error(
+                "Аргумент _id должен быть обязательно заполнен."
+            )
+            return False
+        
+        if _id and column == "" or not column.strip():
+            logger.error(
+                "Аргументы column должен быть обязательно заполнен."
+            )
+            return False
+        
+        if _id and value == "" or not value.strip():
+            logger.error(
+                "Аргументы value должен быть обязательно заполнен."
+            )
+            return False
+        
+        valid_columns = ["title", "description", "category",
+                         "due_date", "priority", "status"]
+        if column not in valid_columns:
+            logger.error(
+                "Аргумент column может включать в себя только следующие значения: "
+                "\"title\", \"description\", \"category\", "
+                "\"due_date\", \"priority\", \"status\""
+            )
+            return False
+ 
         try:
             new_data = []
 
             # Открытие файла data.json в режиме чтения и кодировкой UTF-8.
             with open(self.path, "r", encoding="UTF-8") as file:
                 data = json.load(file)
-            
+
             for task in data:
                 if task["id"] == _id:
-                    self.task_found == True
+                    self.task_found = True  # Задача найдена
 
-                    # Валидация new_value на наличие в задаче с указанным id
+                    # Валидация нового значения
                     if not self.data_validation(
-                        column=f"{column}",
-                        value=task[f"{column}"],
+                        column=column,
+                        value=task[column],
                         new_value=value,
-                        search_option="change"
-                        ):
+                        intention="change",
+                    ):
                         return False
-                    
-                    # Перезапись значения
-                    task[f"{column}"] = value
-                    # Добавление перезаписанного значения в new_data
-                    new_data.append(task)
-                
-                else:
-                    logger.info(f"Задачи с ID {_id} не было найдено.")
-                    return False
-                
-            # Запись измененных данных в файл
-            with open(self.path, "w", encoding="utf-8") as file:
-                json.dump(data, file, indent=4, ensure_ascii=False)
 
-            # Если new_data не пусто, выводим данные в формате JSON или таблицы, 
-            # если данных нет, возвращаем False.
-            if new_data:
-                logger.info(
-                    f"Значение в задаче с ID {_id} в поле \"{column}\", "
-                    f"было изменено на \"{value}\"."
-                    )
-                return True
-            else:
-                logger.info(f"Задача не была изменена.")
+                    # Перезаписываем значение
+                    task[column] = value
+
+                # Добавление задачи в новый список (независимо, была ли она изменена)
+                new_data.append(task)
+
+            # Если задача не была найдена
+            if not self.task_found:
+                logger.warning(f"Задачи с ID {_id} не было найдено.")
                 return False
-            
+
+            # Запись измененных данных обратно в файл
+            with open(self.path, "w", encoding="utf-8") as file:
+                json.dump(new_data, file, indent=4, ensure_ascii=False)
+
+            logger.info(
+                f"Значение в задаче с ID {_id} в поле \"{column}\" "
+                f"было изменено на \"{value}\"."
+            )
+            return True
+
         except Exception as err:
-            logger.critical(f"Произошла ошибка в функции \"{__name__}\": {err}")
+            logger.critical(f"Произошла ошибка в функции \"change_task\": {err}")
             return False
