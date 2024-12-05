@@ -3,7 +3,7 @@ import pytest
 
 from unittest.mock import mock_open, patch
 
-from src.task_manager.task_manager import TaskManager
+from task_manager.task_manager import TaskManager, logger
 
 # Мок-данные для тестов
 MOCK_DATA = [
@@ -37,6 +37,7 @@ def mock_task_manager():
         manager = TaskManager()
         manager.path = "data.json"
         manager.pretty_printed_JSON = True
+        logger.disabled = False
         yield manager
 
 # GETTING_TASKS
@@ -286,7 +287,9 @@ def test_add_task_empty_status(mock_task_manager):
         priority="Низкий",
         status="     "
     )
-    assert result is False
+    # Задача добавится поскольку в пустое значение
+    # status автоматически подставится "Не выполнена"
+    assert result is True
 
 
 def test_add_task_invalid_status(mock_task_manager):
