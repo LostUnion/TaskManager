@@ -3,6 +3,7 @@ import json
 import logging
 from typing import Optional
 from datetime import datetime
+import traceback
 
 from prettytable import PrettyTable
 
@@ -44,6 +45,7 @@ formatter = KeywordColorFormatter(
 handler.setFormatter(formatter)
 logger.addHandler(handler)
 logger.setLevel(logging.DEBUG)
+logger.disabled = True
 
 # Создание таблицы для удобного отображения данных
 table = PrettyTable()
@@ -164,18 +166,23 @@ class TaskManager():
             # Проверка, что если поле value пустое, а option указано,
             # возникает ошибка.
             if value.strip() == "" and option.strip() != "":
-                logger.error(
+                message_error = (
                     "При указании значения в поле \"option\" "
                     "необходимо указать искомое значение в поле \"value\""
                 )
+
+                logger.error(message_error)
+                print(message_error)
                 return False
 
             # Проверка, что если value есть, а option пустое, возникает ошибка.
             if value.strip() != "" and option.strip() == "":
-                logger.error(
+                message_error = (
                     "При указании значения в поле \"value\" необходимо "
                     "указать значение в поле \"option\""
                 )
+                logger.error(message_error)
+                print(message_error)
                 return False
 
             # Проверка, если value и option пустые, возвращаются все данные.
@@ -188,37 +195,47 @@ class TaskManager():
             if value.strip() != "" and option not in ["id", "category",
                                                       "priority", "status",
                                                       "keywords", "due_date"]:
-                logger.error(
+                message_error = (
                     "Аргумент \"option\" должен принимать одно из допустимых "
                     "значений: \"id\", \"category\", \"priority\", "
                     "\"status\", \"keywords\", \"due_date\""
                 )
+
+                logger.error(message_error)
+                print(message_error)
                 return False
 
             if option == "category" and value not in ["Работа",
                                                       "Личное",
                                                       "Обучение"]:
-                logger.error(
+                message_error = (
                     "Аргумент \"value\" должен принимать одно из допустимых "
                     "значений: \"Работа\", \"Личное\" или \"Обучение\""
                 )
+                logger.error(message_error)
+                print(message_error)
                 return False
 
             if option == "status" and value not in ["Выполнена",
                                                     "Не выполнена"]:
-                logger.error(
+                message_error = (
                     "Аргумент \"value\" должен принимать одно из допустимых "
                     "значений: \"Выполнена\" или \"Не выполнена\""
                 )
+                logger.error(message_error)
+                print(message_error)
                 return False
 
             if option == "priority" and value not in ["Высокий",
                                                       "Средний",
                                                       "Низкий"]:
-                logger.error(
+
+                message_error = (
                     "Аргумент \"value\" должен принимать одно из допустимых "
                     "значений: \"Высокий\", \"Средний\" или \"Низкий\""
                 )
+                logger.error(message_error)
+                print(message_error)
                 return False
 
             # Проверка, если значение есть, а option одно из допустимых
@@ -229,7 +246,11 @@ class TaskManager():
                 if not self.data_validation(value=value,
                                             column=str(option),
                                             intention="search"):
-                    logger.error(f"Валидация для \"{option}\" не прошла.")
+                    message_error = (
+                        f"Валидация для \"{option}\" не прошла."
+                    )
+                    logger.error(message_error)
+                    print(message_error)
                     return False
 
                 # Фильтрация задач, добавление задачи,
@@ -246,9 +267,16 @@ class TaskManager():
                     else:
                         return self.format_tasks_table(new_data)
                 else:
-                    logger.warning(
+                    message_warning = (
                         f"Значение \"{value}\" не было найдено в файле."
                     )
+                    user_message_warning = (
+                        f"Такого значения как \"{value}\" не было найдено"
+                        " в вашей таблице."
+                    )
+
+                    logger.warning(message_warning)
+                    print(message_warning)
                     return False
 
             # Проверка, если option == "keywords"
@@ -275,10 +303,16 @@ class TaskManager():
                     else:
                         return self.format_tasks_table(new_data)
                 else:
-                    logger.warning(
+                    message_warning = (
                         f"Ключевого слова \"{value}\" "
                         "не было найдено в таблице."
                     )
+                    user_message_warning = (
+                        f"Ключевого слова \"{value}\" "
+                        "не было найдено в вашей таблице."
+                    )
+                    logger.warning(message_warning)
+                    print(user_message_warning)
                     return False
 
             # Проверка, если option == "due_date" для поиска
@@ -304,19 +338,31 @@ class TaskManager():
                     else:
                         return self.format_tasks_table(new_data)
                 else:
-                    logger.warning(
+                    message_error = (
                         "Просроченных заданий не было найдено в таблице."
                     )
+                    user_message_error = (
+                        "В вашей таблице нет просроченных заданий."
+                    )
+                    logger.warning(message_error)
+                    print(user_message_error)
                     return False
 
         except Exception as err:
-            logger.critical(
-                f"Произошла ошибка в функции \"getting_task\": {err}"
+            tb = traceback.format_exc()
+            message_critical = (
+                f"Произошла ошибка в функции \"getting_task\":{tb}: {err}"
             )
+            user_message_critical = (
+                "Произошли непредвиденные неполадки в программе."
+            )
+            logger.critical(message_critical)
+            print(user_message_critical)
             return False
 
-    def data_validation(self, column: str = "", value: str = "",
-                        new_value: str = "", intention: str = ""):
+    def data_validation(self, column: str = "",
+                        value: str = "", intention: str = "",
+                        _id: Optional[int] = None):
         """
         Функция валидации данных при добавлении или изменении задачи.
 
@@ -328,9 +374,7 @@ class TaskManager():
             column (str): Имя столбца, которое проверяется.
             value (str): Значение, которое проверяется.
             new_value (str): Новое значение, если задача изменяется.
-            intention (str): Намерение (add/change/delete)
-            search_option (str): Опция для поиска (id, keywords, category,
-                                 status)
+            intention (str): Намерение (add/change/delete/search)
 
         Возвращает:
             bool: True, если валидация прошла успешно, иначе False.
@@ -339,115 +383,191 @@ class TaskManager():
         try:
             # Валидация intention на входящие значения
             if intention not in ["add", "change", "delete", "search"]:
-                logger.error(
+                message_error = (
                     "Значение \"intention\" должно быть одним из значений: "
                     "\"add\", \"change\", \"delete\" или \"search\"."
                 )
+                logger.error(message_error)
+                print(message_error)
                 return False
 
             if intention == "delete":
                 if column == "category" and len(value.strip()) < 1:
-                    logger.error("Поле \"category\" не может быть пустым.")
+                    message_error = (
+                        "Поле \"category\" не может быть пустым."
+                    )
+                    user_message_error = (
+                        "Категория задачи должна быть пустой."
+                    )
+                    logger.error(message_error)
+                    print(user_message_error)
                     return False
 
                 if column == "category" and value not in ["Работа",
                                                           "Личное",
                                                           "Обучение"]:
-                    logger.error(
+                    message_error = (
                         "Поле \"category\" должно принимать одно из "
                         "допустимых значений: \"Работа\", \"Личное\" "
                         "или \"Обучение\""
                     )
+                    user_message_error = (
+                        "Категория задачи должна быть только \"Работа\""
+                        ", \"Личное\" или \"Обучение\"."
+                    )
+                    logger.error(message_error)
+                    print(user_message_error)
                     return False
 
             # Проверка, если намерение change или add
-            if intention == "change" or intention == "add":
+            if intention in ("change", "add", "search"):
                 # Проверка на длинну value если column == "title"
-                if column == "title" and len(new_value.strip()) < 5:
-                    logger.error(
+                if column == "title" and len(value.strip()) < 5:
+                    message_error = (
                         "Поле \"title\" не может быть меньше 5 символов."
                     )
+                    user_message_error = (
+                        "Заголовок не может быть менее 5 символов."
+                    )
+                    logger.error(message_error)
+                    print(user_message_error)
                     return False
 
                 # Проверка на длинну value если column == "description"
-                if column == "description" and len(new_value.strip()) < 10:
-                    logger.error(
+                if column == "description" and len(value.strip()) < 10:
+                    message_error = (
                         "Поле \"description\" не может быть меньше "
                         "10 символов."
                     )
+                    user_message_error = (
+                        "Описание не может быть менее 10 символов."
+                    )
+                    logger.error(message_error)
+                    print(user_message_error)
                     return False
 
                 # Проверка на длинну value если column == column == "category"
-                if column == "category" and len(new_value.strip()) < 2:
-                    logger.error(
-                        "Поле \"category\" не может быть меньше 2 символов."
+                if column == "category" and len(value.strip()) < 1:
+                    message_error = (
+                        "Поле \"category\" не может быть меньше пустым."
                     )
+                    user_message_error = (
+                        "Категория не может быть пустой."
+                    )
+                    logger.error(message_error)
+                    print(user_message_error)
                     return False
 
                 # Проверка на отсутствие значения для priority
-                if column == "priority" and len(new_value.strip()) < 1:
-                    logger.error("Поле \"priority\" не может быть пустым.")
+                if column == "priority" and len(value.strip()) < 1:
+                    message_error = (
+                        "Поле \"priority\" не может быть пустым."
+                    )
+                    user_message_error = (
+                        "Приоритет задачи не может быть пустым."
+                    )
+                    logger.error(message_error)
+                    print(message_error)
                     return False
 
                 valid_prior_value = ["Низкий", "Средний", "Высокий"]
-                if column == "priority" and new_value not in valid_prior_value:
-                    logger.error(
+                if column == "priority" and value not in valid_prior_value:
+                    message_error = (
                         "Поле \"priority\" должно быть одним из значений: "
                         "\"Низкий\", \"Средний\", \"Высокий\"."
                     )
+                    user_message_error = (
+                        "Приоритет задачи должен включать в себя одно из зна"
+                        "чений \"Низкий\", \"Средний\" или \"Высокий\"."
+                    )
+                    logger.error(message_error)
+                    print(user_message_error)
                     return False
 
                 # Проверка на допустимые значения для category
-                if column == "category" and new_value not in ["Работа",
-                                                              "Личное",
-                                                              "Обучение"]:
-                    logger.error(
+                if column == "category" and value not in ["Работа",
+                                                          "Личное",
+                                                          "Обучение"]:
+                    message_error = (
                         "Поле \"category\" должно принимать одно из "
                         "допустимых значений: \"Работа\", \"Личное\" или "
                         "\"Обучение\""
                     )
+                    user_message_error = (
+                        "Категория задачи должна быть указана в качестве "
+                        "одного из допустимых значений:\n\"Работа\", \"Ли"
+                        "чное\" или \"Обучение\""
+                    )
+                    logger.error(message_error)
+                    print(user_message_error)
                     return False
 
                 # Проверка на отсутствие значения для status
-                if column == "status" and len(new_value.strip()) < 1:
-                    logger.error("Поле \"status\" не может быть пустым.")
-                    return False
+                if column == "status" and len(value.strip()) < 1:
+                    value = "Не выполнена"
 
                 # Проверка на допустимые значения для status
-                if column == "status" and new_value not in ["Выполнена",
-                                                            "Не выполнена"]:
-                    logger.error(
+                if column == "status" and value not in ["Выполнена",
+                                                        "Не выполнена"]:
+                    message_error = (
                         "Поле \"status\" должно быть одним из значений: "
                         "\"Выполнена\", \"Не выполнена\"."
                     )
+                    user_message_error = (
+                        "Статус задачи принимает только значения: "
+                        "\"Выполнена\" или \"Не выполнена\"."
+                    )
+                    logger.error(message_error)
+                    print(user_message_error)
                     return False
 
                 # Проверка на отсутствие значения для due_date
-                if column == "due_date" and new_value.strip() == "":
-                    logger.error(
-                            "Значение в поле \"due_date\" не должно "
-                            "быть пустым. Ожидается формат YYYY-MM-DD."
-                        )
+                if column == "due_date" and value.strip() == "":
+                    message_error = (
+                        "Значение в поле \"due_date\" не должно "
+                        "быть пустым. Ожидается формат YYYY-MM-DD."
+                    )
+                    user_message_error = (
+                        "Не может быть задачи без сроков выполнения.\n"
+                        "Ожидается формат YYYY-MM-DD."
+                    )
+                    logger.error(message_error)
+                    print(user_message_error)
                     return False
 
                 # Проверка формата даты
                 if column == "due_date":
                     # Шаблон даты
                     date_pattern = r'^\d{4}-\d{2}-\d{2}$'
-                    if not re.match(date_pattern, new_value.strip()):
-                        logger.error(
+                    if not re.match(date_pattern, value.strip()):
+                        message_error = (
                             "Значение в поле \"due_date\" указано "
                             "некорректно. Ожидается формат YYYY-MM-DD."
                         )
+                        user_message_error = (
+                            "Дату необходимо указывать так:\n"
+                            "Год-месяц-день в формате YYYY-MM-DD\n"
+                            "Укажите дату в корректном формате."
+                        )
+                        logger.error(message_error)
+                        print(user_message_error)
                         return False
 
                     # Проверка на будущую дату
                     now = datetime.today().date()
-                    if now.strftime("%Y-%m-%d") > new_value.strip():
-                        logger.error(
+                    if now.strftime("%Y-%m-%d") > value.strip():
+                        message_error = (
                             "Поле \"due_date\" не может содержать дату "
                             "из прошлого."
                         )
+                        user_message_error = (
+                            "Невозможно запланировать задачу на дату, которая"
+                            " уже прошла.\nПожалуйста, укажите дату в предела"
+                            "х месяца или года, при условии,\nчто ее еще не "
+                            "было."
+                        )
+                        logger.error(message_error)
+                        print(user_message_error)
                         return False
 
                 # Проверка на допустимые значения для column
@@ -456,33 +576,64 @@ class TaskManager():
                                     "category", "due_date", "priority",
                                     "status"]
                 if intention == "search" and column not in valid_col_search:
-                    logger.error(
+                    message_error = (
                         "Неверное значение для \"column\". "
                         "Допустимые значения: "
                         f"{', '.join(valid_col_search)}."
                     )
+                    logger.error(message_error)
+                    print(message_error)
                     return False
+
+                # Открытие файла data.json в режиме чтения и кодировкой UTF-8.
+                with open(self.path, "r", encoding="UTF-8") as file:
+                    data = json.load(file)
 
                 # Проверка на повторяющиеся значения, если намерение change
-                if value == new_value:
-                    logger.error(
-                        f"Значение поля \"{column}\" не может быть "
-                        f"изменено с \"{value}\" на \"{new_value}\", "
-                        "поскольку значения одинаковые."
-                    )
-                    return False
+                if intention == "change":
+                    if _id is None:
+                        message_error = (
+                            "Необходимо указать ID"
+                        )
+                        logger.error(message_error)
+                        print(message_error)
+                        return False
+
+                    for task in data:
+                        if task.get("id") == int(_id):
+                            if task.get(column) == value:
+                                message_error = (
+                                    f"Значение поля \"{column}\" не может"
+                                    f" быть изменено с \"{task.get(column)}"
+                                    f"\" на \"{value}\", поскольку значения"
+                                    " одинаковые."
+                                )
+                                user_message_error = (
+                                    "Значение, которое вы хотите изменить,"
+                                    f" уже является \"{value}\".\nПожалуйс"
+                                    "та, укажите новое значение."
+                                )
+                                logger.error(message_error)
+                                print(user_message_error)
+                                return False
 
         except Exception as err:
-            logger.critical(
-                f"Произошла ошибка в функции \"{__name__}\": {err}"
+            tb = traceback.format_exc()
+            message_critical = (
+                f"Произошла ошибка в функции \"data_validation\":{tb}: {err}"
             )
+            user_message_critical = (
+                "Произошли непредвиденные неполадки в программе."
+            )
+            logger.critical(message_critical)
+            print(user_message_critical)
             return False
 
         return True
 
     def add_task(self, title: str = "", description: str = "",
                  category: str = "", due_date: str = "",
-                 priority: str = "", status: str = ""):
+                 priority: str = "", status: str = "Не выполено"):
 
         """
         Функция для добавления новой задачи в систему.
@@ -498,15 +649,17 @@ class TaskManager():
             due_date (str): Дата выполнения задачи в формате YYYY-MM-DD.
             priority (str): Приоритет задачи ("Низкий", "Средний", "Высокий").
             status (str): Статус задачи ("Выполнена" или "Не выполнена").
+                          По умолчанию "Не выполнена"
 
         Возвращает:
             bool: True, если задача успешно добавлена, иначе False.
         """
+
         try:
             # Валидация title
             if not self.data_validation(
                 column="title",
-                new_value=title,
+                value=title,
                 intention="add"
             ):
                 return False
@@ -514,7 +667,7 @@ class TaskManager():
             # Валидация description
             if not self.data_validation(
                 column="description",
-                new_value=description,
+                value=description,
                 intention="add"
             ):
                 return False
@@ -522,7 +675,7 @@ class TaskManager():
             # Валидация category
             if not self.data_validation(
                 column="category",
-                new_value=category,
+                value=category,
                 intention="add"
             ):
                 return False
@@ -530,7 +683,7 @@ class TaskManager():
             # Валидация due_date
             if not self.data_validation(
                 column="due_date",
-                new_value=due_date,
+                value=due_date,
                 intention="add"
             ):
                 return False
@@ -538,7 +691,7 @@ class TaskManager():
             # Валидация priority
             if not self.data_validation(
                 column="priority",
-                new_value=priority,
+                value=priority,
                 intention="add"
             ):
                 return False
@@ -546,7 +699,7 @@ class TaskManager():
             # Валидация status
             if not self.data_validation(
                 column="status",
-                new_value=status,
+                value=status,
                 intention="add"
             ):
                 return False
@@ -583,15 +736,23 @@ class TaskManager():
                 json.dump(data, file, indent=4, ensure_ascii=False)
 
         except Exception as err:
-            logger.critical(
-                f"Произошла ошибка в функции \"{__name__}\": {err}"
+            tb = traceback.format_exc()
+            message_critical = (
+                f"Произошла ошибка в функции \"{__name__}\":{tb} {err}"
             )
+            user_message_critical = (
+                "Произошли непредвиденные неполадки в программе."
+            )
+            logger.critical(message_critical)
+            print(user_message_critical)
             return False
 
-        logger.info(
+        message_success = (
             f"Задача \"{new_task.title}\" успешно добавлена "
             f"в таблицу с ID: {new_task.id}."
-            )
+        )
+        logger.info(message_success)
+        print(message_success)
         return True
 
     def delete_task(self, value: str = "", choice: str = ""):
@@ -617,28 +778,34 @@ class TaskManager():
 
         # Проверка на заполненные значения в value и choice
         if value.strip() == "" or choice.strip() == "":
-            logger.error(
+            message_error = (
                 "Значения в аргументах value и choice "
                 "не должны быть пустыми."
             )
+            logger.error(message_error)
+            print(message_error)
             return False
 
         if choice == "id":
             try:
                 value = int(value)
             except Exception as err:
-                logger.error(
+                message_error = (
                     "Некорректное значение параметра value "
                     f"при использовании id: {err}."
                 )
+                logger.error(message_error)
+                print(message_error)
                 return False
 
-        # Проверка на допустимые значения для choice
+            # Проверка на допустимые значения для choice
         if choice not in ["id", "category"]:
-            logger.error(
+            message_error = (
                 "Значения в аргументе choice должны быть включать "
                 "в себя только \"id\" или \"category\""
             )
+            logger.error(message_error)
+            print(message_error)
             return False
 
         try:
@@ -660,19 +827,27 @@ class TaskManager():
                 for task in data:
                     if task["category"] == value:
                         self.task_found = True
-                        logger.info(
+                        message_ = (
                             f"Задача \"{task['title']}\" с "
                             f"ID {task['id']}, с категорией "
                             f"\"{value}\" была успешно удалена."
                         )
+                        logger.info(message_)
+                        print(message_)
                         continue
 
                     new_data.append(task)
 
                 if not self.task_found:
-                    logger.warning(
+                    message_ = (
                         f"Задачи с категорией \"{value}\" не найдены."
                     )
+                    user_message_ = (
+                        "В Вашей таблице не найдены задачи с категор"
+                        f"ией \"{value}\""
+                    )
+                    logger.warning(message_)
+                    print(user_message_)
                     return False
 
                 # Запись измененных данных в файл
@@ -686,16 +861,25 @@ class TaskManager():
                 for task in data:
                     if task["id"] == value:
                         self.task_found = True
-                        logger.info(
+                        message_ = (
                             f"Задача \"{task['title']}\" с "
                             f"ID {task['id']} была успешно удалена."
                         )
+                        logger.info(message_)
+                        print(message_)
                         continue
 
                     new_data.append(task)
 
                 if not self.task_found:
-                    logger.warning(f"Задача с ID {value} не найдена.")
+                    message_ = (
+                        f"Задача с ID {value} не найдена."
+                    )
+                    user_message_ = (
+                        f"В Вашей таблице нет задачи с ID \"{value}\""
+                    )
+                    logger.warning(message_)
+                    print(user_message_)
                     return False
 
                 # Запись измененных данных в файл
@@ -705,9 +889,15 @@ class TaskManager():
                 return True
 
         except Exception as err:
-            logger.critical(
-                f"Произошла ошибка в функции \"delete_task\": {err}"
+            tb = traceback.format_exc()
+            message_critical = (
+                f"Произошла ошибка в функции \"delete_task\":{tb} {err}"
             )
+            user_message_critical = (
+                "Произошли непредвиденные неполадки в программе."
+            )
+            logger.critical(message_critical)
+            print(user_message_critical)
             return False
 
     def change_task(self, _id: Optional[int] = None,
@@ -735,9 +925,11 @@ class TaskManager():
 
         _id = str(_id)
         if _id is None or _id.strip() == "":
-            logger.error(
+            message_error = (
                 "Аргумент _id должен быть обязательно заполнен."
             )
+            logger.error(message_error)
+            print(message_error)
             return False
 
         # Проверка _id на значение
@@ -745,31 +937,39 @@ class TaskManager():
             try:
                 _id = int(_id)
             except Exception as err:
-                logger.error(
+                message_error = (
                     f"Некорректное значение _id: {err}"
                 )
+                logger.error(message_error)
+                print(message_error)
                 return False
 
         if _id and column == "" or not column.strip():
-            logger.error(
+            message_error = (
                 "Аргументы column должен быть обязательно заполнен."
             )
+            logger.error(message_error)
+            print(message_error)
             return False
 
         if _id and value == "" or not value.strip():
-            logger.error(
+            message_error = (
                 "Аргументы value должен быть обязательно заполнен."
             )
+            logger.error(message_error)
+            print(message_error)
             return False
 
         valid_columns = ["title", "description", "category",
                          "due_date", "priority", "status"]
         if column not in valid_columns:
-            logger.error(
+            message_error = (
                 "Аргумент column может включать в себя только "
                 "следующие значения: \"title\", \"description\", "
                 "\"category\", \"due_date\", \"priority\", \"status\""
             )
+            logger.error(message_error)
+            print(message_error)
             return False
 
         try:
@@ -786,9 +986,9 @@ class TaskManager():
                     # Валидация нового значения
                     if not self.data_validation(
                         column=column,
-                        value=task[column],
-                        new_value=value,
+                        value=value,
                         intention="change",
+                        _id=_id
                     ):
                         return False
 
@@ -801,21 +1001,42 @@ class TaskManager():
 
             # Если задача не была найдена
             if not self.task_found:
-                logger.warning(f"Задачи с ID {_id} не было найдено.")
+                message_warning = (
+                    f"Задачи с ID {_id} не было найдено."
+                )
+                user_message_warning = (
+                    f"Не удалось найти задачу с ID {_id}."
+                    "Пожалуйста, проверьте, верно ли вы у"
+                    "казали искомое значение."
+                )
+                logger.warning(message_warning)
+                print(user_message_warning)
                 return False
 
             # Запись измененных данных обратно в файл
             with open(self.path, "w", encoding="utf-8") as file:
                 json.dump(new_data, file, indent=4, ensure_ascii=False)
 
-            logger.info(
+            message_success = (
                 f"Значение в задаче с ID {_id} в поле \"{column}\" "
                 f"было изменено на \"{value}\"."
             )
+            user_message_success = (
+                f"Готово! Значение в задаче с ID {_id} "
+                f"было изменено на \"{value}\"."
+            )
+            logger.info(message_success)
+            print(user_message_success)
             return True
 
         except Exception as err:
-            logger.critical(
-                f"Произошла ошибка в функции \"change_task\": {err}"
+            tb = traceback.format_exc()
+            message_critical = (
+                f"Произошла ошибка в функции \"change_task\":{tb} {err}"
             )
+            user_message_critical = (
+                "Произошли непредвиденные неполадки в программе."
+            )
+            logger.critical(message_critical)
+            print(user_message_critical)
             return False
